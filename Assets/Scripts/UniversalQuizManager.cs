@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -21,19 +22,51 @@ public class UniversalQuizManager : MonoBehaviour
     public GameObject completionPanel;
     public TextMeshProUGUI scoreText;
 
+    [Header("UI References - Explanation Panel (Optional)")]
+    [Tooltip("If assigned, shown before the quiz starts (e.g. 'What is odd/even?'). Leave empty to start the quiz immediately, as before.")]
+    public GameObject explanationPanel;
+
+    [Header("Success Subtitle (Optional)")]
+    [Tooltip("If assigned, plays a multi-page typewriter subtitle + voiceover when the completion panel is shown.")]
+    public TextMeshProUGUI storyText;
+    public GameObject subtitleBox;
+
+    [Tooltip("Lower value = Faster typing speed (0.02 - 0.035 works well).")]
+    public float timePerCharacter = 0.05f;
+    [Tooltip("Pause duration in seconds between subtitle pages.")]
+    public float pauseBetweenPages = 0.8f;
+
+    public AudioSource audioSource;
+    public AudioClip voSuccess;
+
+    [Tooltip("Split into pages so each fits comfortably inside the subtitle box.")]
+    public string[] successPages;
+
+    private Coroutine typewriterCoroutine;
+
     private void Start()
     {
         // Hook up the button click events automatically
         for (int i = 0; i < optionButtons.Length; i++)
         {
-            int index = i; 
+            int index = i;
             optionButtons[i].onClick.AddListener(() => OnOptionSelected(index));
         }
-        
+
         nextButton.onClick.AddListener(NextQuestion);
-        
-        // Tells the quiz to actually begin when the panel turns on!
-        StartQuiz(); 
+
+        if (explanationPanel != null)
+        {
+            // Show the explanation first; StartQuiz() is called from the panel's "Continue" button
+            quizPanel.SetActive(false);
+            if (completionPanel != null) completionPanel.SetActive(false);
+            explanationPanel.SetActive(true);
+        }
+        else
+        {
+            // Tells the quiz to actually begin when the panel turns on!
+            StartQuiz();
+        }
     }
 
     // Call this from your MasterQuizController to start the specific quiz
@@ -60,8 +93,17 @@ public class UniversalQuizManager : MonoBehaviour
 
         currentQuestionIndex = 0;
         score = 0;
+        if (explanationPanel != null) explanationPanel.SetActive(false);
         completionPanel.SetActive(false);
         quizPanel.SetActive(true);
+
+        // Analytics: record quiz total for this chapter's MCQ
+        if (AnalyticsManager.Instance != null)
+        {
+            AnalyticsManager.Instance.AddQuizQuestions(questionList.Count);
+            AnalyticsManager.Instance.StartQuizTimer();
+        }
+
         DisplayQuestion();
     }
 
@@ -178,6 +220,10 @@ public class UniversalQuizManager : MonoBehaviour
             PreserveButtonColor(optionButtons[selectedIndex]); // keep original blue, don't go gray
             optionButtons[selectedIndex].interactable = false;
             
+            // Analytics: record quiz error
+            if (AnalyticsManager.Instance != null)
+                AnalyticsManager.Instance.RecordQuizError();
+
             // Ensure the Next button stays hidden
             if (nextButton != null) nextButton.gameObject.SetActive(false);
         }
@@ -191,9 +237,61 @@ public class UniversalQuizManager : MonoBehaviour
 
     private void ShowCompletionPanel()
     {
+        // Analytics: stop quiz timer
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.StopQuizTimer();
+
         quizPanel.SetActive(false);
         completionPanel.SetActive(true);
-        scoreText.text = $"Quiz Complete!\nScore: {score} / {questionList.Count}";
+        if (scoreText != null) scoreText.gameObject.SetActive(false);
+        if (feedbackText != null) feedbackText.gameObject.SetActive(false);
+
+        PlaySuccessSequence();
+    }
+
+    private void PlaySuccessSequence()
+    {
+        if (audioSource != null && voSuccess != null)
+        {
+            audioSource.Stop();
+            audioSource.PlayOneShot(voSuccess);
+        }
+
+        if (subtitleBox != null) subtitleBox.SetActive(true);
+
+        if (typewriterCoroutine != null)
+        {
+            StopCoroutine(typewriterCoroutine);
+        }
+
+        if (successPages != null && successPages.Length > 0)
+        {
+            typewriterCoroutine = StartCoroutine(MultiPageTypewriterRoutine(successPages));
+        }
+    }
+
+    private IEnumerator MultiPageTypewriterRoutine(string[] pages)
+    {
+        if (storyText == null) yield break;
+
+        for (int p = 0; p < pages.Length; p++)
+        {
+            string pageText = pages[p];
+            storyText.text = "";
+
+            for (int i = 0; i <= pageText.Length; i++)
+            {
+                storyText.text = pageText.Substring(0, i);
+                yield return new WaitForSeconds(timePerCharacter);
+            }
+
+            if (p < pages.Length - 1)
+            {
+                yield return new WaitForSeconds(pauseBetweenPages);
+            }
+        }
+
+        typewriterCoroutine = null;
     }
 
     /// <summary>

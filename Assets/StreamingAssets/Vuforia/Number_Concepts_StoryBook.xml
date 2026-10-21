@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <QCARConfig>
   <Tracking>
+    <ImageTarget name="fdf1" size="0.200000 0.282885" />
+    <ImageTarget name="KingFisher" size="0.200000 0.267857" />
     <ImageTarget name="podium" size="0.200000 0.200000" />
     <ImageTarget name="stonemarker" size="0.200000 0.267857" />
     <ImageTarget name="testimg" size="0.200000 0.261716" />

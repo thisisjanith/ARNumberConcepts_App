@@ -42,6 +42,10 @@ public class LanguageSwitcher : MonoBehaviour
         SelectedLanguageID = langIndex;
         bool isEnglish = (langIndex == 0);
 
+        // Analytics: record language selection
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.SetLanguage(langIndex);
+
         // Hide language picker, show login panel
         if(languagePanel) languagePanel.SetActive(false);
         if(loginPanel) loginPanel.SetActive(true);

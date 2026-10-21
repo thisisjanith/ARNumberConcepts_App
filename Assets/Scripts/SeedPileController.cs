@@ -23,7 +23,7 @@ public class SeedPileController : MonoBehaviour
     [Header("Subtitle Settings")]
     public TextMeshProUGUI subtitleText; // Reference to your Subtitle UI Text
     public GameObject subtitlePanel;     // Parent container/panel for subtitles
-    
+
     [Header("Typewriter Speed Settings")]
     [Tooltip("Lower value = Faster typing speed (0.02 - 0.035 works well).")]
     public float timePerCharacter = 0.05f;
@@ -48,6 +48,7 @@ public class SeedPileController : MonoBehaviour
     public AudioClip voLimitOnes;      // "We already have 5 ones! No more seeds needed."
 
     private Coroutine typewriterCoroutine;
+    private bool hasInitialized = false; // Prevents counting initial Start() reset as a retry
 
     // Subtitle split into two distinct pages for spawn VO
     private readonly string[] subtitlePages = new string[]
@@ -79,10 +80,15 @@ public class SeedPileController : MonoBehaviour
         }
 
         ResetActivity();
+        hasInitialized = true;
     }
 
     public void ResetActivity()
     {
+        // Analytics: record retry (skip the initial call from Start)
+        if (hasInitialized && AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.RecordRetry();
+
         remainingSeeds = targetNumber;
         countThousands = 0;
         countHundreds = 0;
@@ -101,6 +107,10 @@ public class SeedPileController : MonoBehaviour
     /// </summary>
     public void PlaySpawnVoiceover()
     {
+        // Analytics: start AR interaction timer
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.StartARTimer();
+
         if (audioSource != null && arSpawnVO != null)
         {
             audioSource.Stop();
@@ -311,6 +321,10 @@ public class SeedPileController : MonoBehaviour
     private void OnActivityComplete()
     {
         Debug.Log("Place Value Activity Completed!");
+
+        // Analytics: stop AR interaction timer
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.StopARTimer();
 
         if (equationDisplayText != null)
         {

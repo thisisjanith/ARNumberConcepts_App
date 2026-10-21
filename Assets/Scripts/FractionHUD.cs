@@ -113,6 +113,10 @@ public class FractionHUD : MonoBehaviour
         // Show HUD when AR marker enters view
         if (container != null) container.gameObject.SetActive(true);
         TriggerIntro();
+
+        // Analytics: start AR interaction timer (only records if not already running)
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.StartARTimer();
     }
 
     public void OnTargetLost()

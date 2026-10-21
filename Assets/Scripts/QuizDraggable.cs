@@ -95,6 +95,10 @@ public class QuizDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
                 slot.MarkAsWrong();
                 // Haptic error feedback
                 HapticFeedback.Error();
+
+                // Analytics: record quiz error
+                if (AnalyticsManager.Instance != null)
+                    AnalyticsManager.Instance.RecordQuizError();
             }
         }
 

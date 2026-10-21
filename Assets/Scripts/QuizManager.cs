@@ -28,6 +28,13 @@ public class QuizManager : MonoBehaviour
         correctAnswers = 0;
         lastScoreTime = 0f;
 
+        // Analytics: record total questions for drag-and-drop quiz
+        if (AnalyticsManager.Instance != null)
+        {
+            AnalyticsManager.Instance.AddQuizQuestions(totalQuestions);
+            AnalyticsManager.Instance.StartQuizTimer();
+        }
+
         // Hide next chapter button until quiz is complete
         if (nextChapterButton != null)
         {
@@ -62,6 +69,10 @@ public class QuizManager : MonoBehaviour
         // Mark quiz as complete to prevent further scoring
         isQuizFinished = true;
         Debug.Log("Quiz Complete!");
+
+        // Analytics: stop quiz timer
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.StopQuizTimer();
 
         // Show next chapter button for progression
         if (nextChapterButton != null)

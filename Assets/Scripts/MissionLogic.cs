@@ -66,6 +66,10 @@ public class MissionLogic : MonoBehaviour
 
     public void OnFinishButtonClicked()
     {
+        // Analytics: stop AR interaction timer
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.StopARTimer();
+
         // Stop any playing voiceover before transition
         if (voiceOverSource != null && voiceOverSource.isPlaying)
         {
@@ -142,13 +146,21 @@ public class MissionLogic : MonoBehaviour
 
     public void ScanAgain()
     {
+        // Analytics: record retry
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.RecordRetry();
+
         // Reload AR scene for retry
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     public void GoToMainMenu()
     {
-        // Return to language selection
+        // Analytics: fire the submit and move on immediately - AnalyticsManager is
+        // DontDestroyOnLoad so the request keeps running through the scene change.
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.SubmitSession();
+
         SceneManager.LoadScene("LoginScene");
     }
 }

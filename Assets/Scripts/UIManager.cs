@@ -13,6 +13,8 @@ public class UIManager : MonoBehaviour
     public GameObject mainMenuPanel;
     // Tutorial carousel for first-time users
     public GameObject tutorialPanel;
+    // Language selection panel (first screen on fresh launch)
+    public GameObject languagePanel;
 
     [Header("AR/Quiz Scene Panels")]
     // Victory/success panel shown after AR mission completion
@@ -80,6 +82,12 @@ public class UIManager : MonoBehaviour
                 if (PlayerPrefs.GetInt("ShowTutorialOnLoad", 0) == 1)
                 {
                     PlayerPrefs.SetInt("ShowTutorialOnLoad", 0); // Reset the flag
+
+                    // Hide the language panel and login panel so they don't flash
+                    if (languagePanel) languagePanel.SetActive(false);
+                    if (loginPanel) loginPanel.SetActive(false);
+                    if (mainMenuPanel) mainMenuPanel.SetActive(false);
+
                     ShowTutorial();
                 }
             }
@@ -212,7 +220,11 @@ public class UIManager : MonoBehaviour
 
     public void GoHome()
     {
-        // Return to login/language selection
+        // Analytics: fire the submit and move on immediately - AnalyticsManager is
+        // DontDestroyOnLoad so the request keeps running through the scene change.
+        if (AnalyticsManager.Instance != null)
+            AnalyticsManager.Instance.SubmitSession();
+
         SceneManager.LoadScene("LoginScene");
     }
 }

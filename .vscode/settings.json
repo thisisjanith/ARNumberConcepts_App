@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "AR_NumberConcepts_PP1.sln"
+    "dotnet.defaultSolution": "AR_NumberConcepts_PP2.sln"
 }
