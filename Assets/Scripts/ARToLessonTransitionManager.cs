@@ -3,6 +3,11 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// Handles the switch from the AR activity to the in-app (non-AR) practice screen: shows a
+/// "well done" overlay, hides the AR content, then fades in the practice panel. Fades use
+/// CanvasGroup.alpha because it fades a whole UI panel and all of its children at once.
+/// </summary>
 public class ARToLessonTransitionManager : MonoBehaviour
 {
     [Header("AR Activity References")]
@@ -35,6 +40,10 @@ public class ARToLessonTransitionManager : MonoBehaviour
         StartCoroutine(TransitionSequence());
     }
 
+    /// <summary>
+    /// Coroutine that runs the steps in order; each 'yield return' waits for that step (e.g. a
+    /// fade) to finish before moving on.
+    /// </summary>
     private IEnumerator TransitionSequence()
     {
         // 1. Show the transition overlay (e.g., "Great Job! Moving to Practice...")
@@ -76,12 +85,16 @@ public class ARToLessonTransitionManager : MonoBehaviour
         InitializePracticeLesson();
     }
 
+    /// <summary>Placeholder hook for setting up the follow-up practice lesson.</summary>
     private void InitializePracticeLesson()
     {
         Debug.Log("In-App Practice Lesson Initialized!");
         // Call your Practice Lesson Manager's setup method here (e.g., PracticeManager.Instance.LoadNextNumber();)
     }
 
+    /// <summary>
+    /// Fades a CanvasGroup's alpha from startAlpha to endAlpha over 'duration' seconds.
+    /// </summary>
     private IEnumerator FadeCanvasGroup(CanvasGroup group, float startAlpha, float endAlpha, float duration)
     {
         if (group == null) yield break;

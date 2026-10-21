@@ -1,9 +1,17 @@
 using UnityEngine;
 using System.Collections;
 
+/// <summary>
+/// Gate chapter: one quarter of the broken Sun-Stone in AR. When tapped, the piece flies to its
+/// assigned slot while rotating to match it, then reports to three systems: FractionQuest (game
+/// logic), MissionLogic (finish / quiz button) and FractionHUD (on-screen fraction 1/4, 2/4,
+/// ...).
+/// </summary>
 public class StonePiece : MonoBehaviour
 {
+    // Parent logic script, found automatically in Start.
     private FractionQuest logic;
+    // Guard so a second tap during the flight does not start another coroutine.
     private bool isMoving = false;
     
     [Header("Movement & Alignment")]
@@ -11,12 +19,14 @@ public class StonePiece : MonoBehaviour
     public float flySpeed = 5f;
     public float rotationSpeed = 10f;
 
+    /// <summary>Finds the FractionQuest on a parent object.</summary>
     void Start()
     {
         // Finding the main game logic in the parent
         logic = GetComponentInParent<FractionQuest>();
     }
 
+    /// <summary>Called by Unity when the child taps this piece's collider.</summary>
     void OnMouseDown()
     {
         // Only start moving if we aren't already moving and have a target
@@ -28,6 +38,9 @@ public class StonePiece : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Coroutine: fly to the target slot, snap into place, then notify the other systems.
+    /// </summary>
     IEnumerator FlyAndJoin()
     {
         isMoving = true;

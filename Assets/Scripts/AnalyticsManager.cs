@@ -14,6 +14,7 @@ using UnityEngine.Networking;
 public class AnalyticsManager : MonoBehaviour
 {
     // ─── Singleton ───────────────────────────────────────────────
+    // Singleton: one shared instance that any script can reach through AnalyticsManager.Instance.
     public static AnalyticsManager Instance { get; private set; }
 
     // ─── Configuration ───────────────────────────────────────────
@@ -22,9 +23,12 @@ public class AnalyticsManager : MonoBehaviour
     public string firebaseDatabaseURL = "PASTE_YOUR_FIREBASE_URL_HERE";
 
     // ─── Session Data ────────────────────────────────────────────
+    // Language of the current session ("English" or "Sinhala").
     private string sessionLanguage = "English";
 
     // 1. AR Interaction Time
+    // Each timer stores its start time, the accumulated total and whether it is running.
+    // Time.realtimeSinceStartup is used so the timing is not affected by Time.timeScale.
     private float arTimerStart = 0f;
     private float arTotalTime = 0f;
     private bool arTimerRunning = false;
@@ -35,6 +39,7 @@ public class AnalyticsManager : MonoBehaviour
     private bool quizTimerRunning = false;
 
     // 2. Quiz Error Rate
+    // Error rate = errors / questions, calculated when the session is submitted.
     private int totalQuizErrors = 0;
     private int totalQuizQuestions = 0;
 
@@ -45,6 +50,8 @@ public class AnalyticsManager : MonoBehaviour
     private int totalRetries = 0;
 
     // Guards
+    // sessionSubmitted stops the same session being sent twice; csvFilePath is the local backup
+    // file.
     private bool sessionSubmitted = false;
     private string csvFilePath;
 
@@ -53,8 +60,13 @@ public class AnalyticsManager : MonoBehaviour
 
     // ─── Unity Lifecycle ─────────────────────────────────────────
 
+    /// <summary>
+    /// Awake: enforce the singleton and keep this object alive across scene changes.
+    /// </summary>
     private void Awake()
     {
+        // If another AnalyticsManager already exists (e.g. LoginScene loaded again), destroy this
+        // duplicate.
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -62,12 +74,17 @@ public class AnalyticsManager : MonoBehaviour
         }
 
         Instance = this;
+        // DontDestroyOnLoad keeps this GameObject alive when scenes change, so the timers keep
+        // counting for the whole session.
         DontDestroyOnLoad(gameObject);
 
+        // Device identifier (not the child's name), so entries from different test devices can be told
+        // apart.
         deviceId = SystemInfo.deviceUniqueIdentifier;
 
         // Local CSV backup
         csvFilePath = Path.Combine(Application.persistentDataPath, "AR_NumberConcepts_analytics.csv");
+        // Write the CSV header row only the first time the file is created.
         if (!File.Exists(csvFilePath))
         {
             File.WriteAllText(csvFilePath,
@@ -77,6 +94,7 @@ public class AnalyticsManager : MonoBehaviour
         ResetSession();
     }
 
+    /// <summary>Start: resend any sessions that were saved offline earlier.</summary>
     private void Start()
     {
         // On startup, flush any Firebase data that was saved offline (e.g. if the app closed unexpectedly)
@@ -100,6 +118,9 @@ public class AnalyticsManager : MonoBehaviour
 
     // ─── Public API ──────────────────────────────────────────────
 
+    /// <summary>
+    /// Called by LanguageSwitcher: records the language and starts the session clock.
+    /// </summary>
     public void SetLanguage(int languageID)
     {
         sessionLanguage = (languageID == 0) ? "English" : "Sinhala";
@@ -107,6 +128,10 @@ public class AnalyticsManager : MonoBehaviour
         Debug.Log($"[Analytics] Language: {sessionLanguage} | Session started.");
     }
 
+    /// <summary>
+    /// Starts timing AR interaction. Ignored if already running, so repeated target-found events do
+    /// not reset it.
+    /// </summary>
     public void StartARTimer()
     {
         if (arTimerRunning) return;
@@ -114,6 +139,7 @@ public class AnalyticsManager : MonoBehaviour
         arTimerRunning = true;
     }
 
+    /// <summary>Stops the AR timer and adds the elapsed time to the total.</summary>
     public void StopARTimer()
     {
         if (!arTimerRunning) return;
@@ -122,6 +148,7 @@ public class AnalyticsManager : MonoBehaviour
         arTimerRunning = false;
     }
 
+    /// <summary>Starts timing quiz interaction (ignored if already running).</summary>
     public void StartQuizTimer()
     {
         if (quizTimerRunning) return;
@@ -129,6 +156,7 @@ public class AnalyticsManager : MonoBehaviour
         quizTimerRunning = true;
     }
 
+    /// <summary>Stops the quiz timer and adds the elapsed time to the total.</summary>
     public void StopQuizTimer()
     {
         if (!quizTimerRunning) return;
@@ -137,21 +165,28 @@ public class AnalyticsManager : MonoBehaviour
         quizTimerRunning = false;
     }
 
+    /// <summary>Called by the quizzes on every wrong answer.</summary>
     public void RecordQuizError()
     {
         totalQuizErrors++;
     }
 
+    /// <summary>Called by each quiz when it starts, with its number of questions.</summary>
     public void AddQuizQuestions(int count)
     {
         totalQuizQuestions += count;
     }
 
+    /// <summary>Called when the child presses Retry in an activity.</summary>
     public void RecordRetry()
     {
         totalRetries++;
     }
 
+    /// <summary>
+    /// Ends the session: stops the timers, saves a CSV row, sends the data to Firebase, then resets
+    /// for the next session. Called from the Home buttons.
+    /// </summary>
     public void SubmitSession(System.Action onComplete = null)
     {
         if (sessionSubmitted)
@@ -212,6 +247,10 @@ public class AnalyticsManager : MonoBehaviour
 
     // ─── Firebase POST ───────────────────────────────────────────
 
+    /// <summary>
+    /// Builds the JSON body by hand with string interpolation. :F1 and :F2 format numbers to 1 or 2
+    /// decimal places.
+    /// </summary>
     private string BuildJSON()
     {
         float sessionDuration = Time.realtimeSinceStartup - sessionStartTime;
@@ -236,6 +275,11 @@ public class AnalyticsManager : MonoBehaviour
             + "}";
     }
 
+    /// <summary>
+    /// Coroutine: sends the JSON with an HTTP POST using UnityWebRequest. A coroutine is used so
+    /// waiting for the network does not freeze the app. If sending fails, the data is cached
+    /// offline and retried on the next launch.
+    /// </summary>
     private IEnumerator PostToFirebase(string json, System.Action onComplete = null)
     {
         Debug.Log($"[Analytics] Sending to Firebase:\n{json}");
@@ -255,11 +299,13 @@ public class AnalyticsManager : MonoBehaviour
 
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
+            // Attach the JSON body, a buffer for the server's reply and a 10 second timeout.
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
             request.timeout = 10;
 
+            // Wait (without blocking the game) until the request finishes.
             yield return request.SendWebRequest();
 
             if (request.result == UnityWebRequest.Result.Success)
@@ -276,6 +322,10 @@ public class AnalyticsManager : MonoBehaviour
         onComplete?.Invoke();
     }
 
+    /// <summary>
+    /// Adds a JSON payload to an offline queue stored in PlayerPrefs. Entries are separated by
+    /// "|||" and are sent from Start() on the next launch.
+    /// </summary>
     private void SaveFirebaseOffline(string json)
     {
         string existing = PlayerPrefs.GetString("FirebaseOfflineCache", "");
@@ -288,6 +338,9 @@ public class AnalyticsManager : MonoBehaviour
 
     // ─── Local CSV Backup ────────────────────────────────────────
 
+    /// <summary>
+    /// Appends one row to the local CSV file in the app's persistent data folder.
+    /// </summary>
     private void SaveToCSV()
     {
         float sessionDuration = Time.realtimeSinceStartup - sessionStartTime;
@@ -303,6 +356,9 @@ public class AnalyticsManager : MonoBehaviour
         catch (System.Exception ex) { Debug.LogError($"[Analytics] CSV error: {ex.Message}"); }
     }
 
+    /// <summary>
+    /// Called by Unity when the app is closing: saves an unsent session offline.
+    /// </summary>
     private void OnApplicationQuit()
     {
         if (!sessionSubmitted)
@@ -323,6 +379,10 @@ public class AnalyticsManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called by Unity when the app goes to the background (pauseStatus = true) or comes back.
+    /// Mobile operating systems may kill background apps, so the session is saved here.
+    /// </summary>
     private void OnApplicationPause(bool pauseStatus)
     {
         if (pauseStatus && !sessionSubmitted)

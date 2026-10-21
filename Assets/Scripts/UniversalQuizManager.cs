@@ -4,10 +4,19 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 
+/// <summary>
+/// Reusable multiple-choice quiz engine used by every chapter's quiz panel. The questions are
+/// data (a List<QuizQuestion> filled in the Inspector), so one script serves all chapters.
+/// Correct answer -> green text, praise and a Next button. Wrong answer -> red text, a hint,
+/// and only that option is disabled so the child can try again (learning from feedback instead
+/// of simply failing). At the end it shows a completion panel with an optional voiceover and
+/// typewriter subtitles.
+/// </summary>
 public class UniversalQuizManager : MonoBehaviour
 {
     [Header("Quiz Data")]
     public List<QuizQuestion> questionList;
+    // Index of the question being shown, and the number answered correctly.
     private int currentQuestionIndex = 0;
     private int score = 0;
 
@@ -42,13 +51,19 @@ public class UniversalQuizManager : MonoBehaviour
     [Tooltip("Split into pages so each fits comfortably inside the subtitle box.")]
     public string[] successPages;
 
+    // Running typewriter coroutine, so it can be stopped or replaced.
     private Coroutine typewriterCoroutine;
 
+    /// <summary>
+    /// Connects the option buttons, then either shows the explanation panel or starts the quiz.
+    /// </summary>
     private void Start()
     {
         // Hook up the button click events automatically
         for (int i = 0; i < optionButtons.Length; i++)
         {
+            // Copy the loop variable: the lambda captures variables, so without this copy every button
+            // would use the final value of i.
             int index = i;
             optionButtons[i].onClick.AddListener(() => OnOptionSelected(index));
         }
@@ -107,6 +122,9 @@ public class UniversalQuizManager : MonoBehaviour
         DisplayQuestion();
     }
 
+    /// <summary>
+    /// Shows the current question and its options, or the completion panel when all are done.
+    /// </summary>
     private void DisplayQuestion()
     {
         if (currentQuestionIndex >= questionList.Count)
@@ -143,6 +161,9 @@ public class UniversalQuizManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called when an option button is pressed; selectedIndex is the button's position.
+    /// </summary>
     public void OnOptionSelected(int selectedIndex)
     {
         // --- Guard: question list must be populated ---
@@ -229,12 +250,16 @@ public class UniversalQuizManager : MonoBehaviour
         }
     }
 
+    /// <summary>Wired to the Next button.</summary>
     public void NextQuestion()
     {
         currentQuestionIndex++;
         DisplayQuestion();
     }
 
+    /// <summary>
+    /// All questions answered: stop the quiz timer and show the completion panel.
+    /// </summary>
     private void ShowCompletionPanel()
     {
         // Analytics: stop quiz timer
@@ -249,6 +274,7 @@ public class UniversalQuizManager : MonoBehaviour
         PlaySuccessSequence();
     }
 
+    /// <summary>Plays the success voiceover and starts the subtitle typewriter.</summary>
     private void PlaySuccessSequence()
     {
         if (audioSource != null && voSuccess != null)
@@ -270,6 +296,9 @@ public class UniversalQuizManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Coroutine: types each page one character at a time, pausing between pages.
+    /// </summary>
     private IEnumerator MultiPageTypewriterRoutine(string[] pages)
     {
         if (storyText == null) yield break;

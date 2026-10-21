@@ -24,11 +24,13 @@ public class OnboardingLoader : MonoBehaviour
     // even if warm-up finishes almost instantly.
     public float minimumDisplayTime = 2f;
 
+    /// <summary>Starts the onboarding coroutine as soon as the splash scene opens.</summary>
     void Start()
     {
         StartCoroutine(RunOnboarding());
     }
 
+    /// <summary>Coroutine: warm up SampleScene, unload it again, then open LoginScene.</summary>
     IEnumerator RunOnboarding()
     {
         float startTime = Time.realtimeSinceStartup;
@@ -36,6 +38,7 @@ public class OnboardingLoader : MonoBehaviour
         // Load SampleScene additively so its Awake/Start (Vuforia init, AR asset
         // loading) runs now, on top of this splash screen.
         AsyncOperation warmupLoad = SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Additive);
+        // Update the progress bar every frame until the background load finishes.
         while (!warmupLoad.isDone)
         {
             UpdateProgressUI(warmupLoad.progress);
@@ -52,15 +55,20 @@ public class OnboardingLoader : MonoBehaviour
         AsyncOperation warmupUnload = SceneManager.UnloadSceneAsync("SampleScene");
         yield return warmupUnload;
 
+        // Measure how long warm-up took so the splash can be padded up to minimumDisplayTime.
         float elapsed = Time.realtimeSinceStartup - startTime;
         if (elapsed < minimumDisplayTime)
         {
             yield return new WaitForSecondsRealtime(minimumDisplayTime - elapsed);
         }
 
+        // Single mode replaces all loaded scenes with LoginScene.
         SceneManager.LoadScene("LoginScene", LoadSceneMode.Single);
     }
 
+    /// <summary>
+    /// Updates the optional fill bar and percentage label (progress is 0 to 1).
+    /// </summary>
     void UpdateProgressUI(float progress)
     {
         if (progressFill != null) progressFill.fillAmount = progress;

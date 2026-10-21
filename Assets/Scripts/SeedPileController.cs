@@ -2,13 +2,23 @@ using System.Collections;
 using UnityEngine;
 using TMPro;
 
+/// <summary>
+/// River chapter AR activity (place value). The child must sort 2,305 seeds by tapping
+/// containers: Stone Chest = 1000, Basket = 100, Pouch = 10, Lotus Seed = 1. The script works
+/// out from the target number how many of each container are allowed (2 thousands, 3 hundreds,
+/// 0 tens, 5 ones), rejects extra or zero-value taps with an explanatory voiceover, and at the
+/// end shows the expanded form 2000 + 300 + 0 + 5 = 2,305.
+/// </summary>
 public class SeedPileController : MonoBehaviour
 {
     [Header("Target Number Configuration")]
     public int targetNumber = 2305;
+    // Seeds still to be sorted; starts at targetNumber and counts down to 0.
     private int remainingSeeds;
 
     [Header("Place Value Tracker")]
+    // How many times each container has been tapped (public so it can be watched in the
+    // Inspector).
     public int countThousands = 0;
     public int countHundreds = 0;
     public int countTens = 0;
@@ -47,6 +57,7 @@ public class SeedPileController : MonoBehaviour
     public AudioClip voLimitHundreds;  // "We already have 3 hundreds! No more baskets needed."
     public AudioClip voLimitOnes;      // "We already have 5 ones! No more seeds needed."
 
+    // Running typewriter coroutine (null when none is running).
     private Coroutine typewriterCoroutine;
     private bool hasInitialized = false; // Prevents counting initial Start() reset as a retry
 
@@ -57,11 +68,16 @@ public class SeedPileController : MonoBehaviour
         "Tap the Stone Chests for thousands, Baskets for hundreds, Pouches for tens, and Lotus Seeds for ones. Let's begin!"
     };
 
+    /// <summary>
+    /// Finds the Retry button if it was not assigned, then sets up a fresh activity.
+    /// </summary>
     private void Start()
     {
         // Aggressively find the Retry button if not assigned, no matter where it is
         if (retryButton == null)
         {
+            // Resources.FindObjectsOfTypeAll also finds inactive objects; the normal Find methods skip
+            // them, and the Retry button is hidden at the start.
             UnityEngine.UI.Button[] allButtons = Resources.FindObjectsOfTypeAll<UnityEngine.UI.Button>();
             foreach (UnityEngine.UI.Button btn in allButtons)
             {
@@ -83,6 +99,9 @@ public class SeedPileController : MonoBehaviour
         hasInitialized = true;
     }
 
+    /// <summary>
+    /// Resets the counters and UI for a new attempt. Also wired to the Retry button.
+    /// </summary>
     public void ResetActivity()
     {
         // Analytics: record retry (skip the initial call from Start)
@@ -128,6 +147,7 @@ public class SeedPileController : MonoBehaviour
         typewriterCoroutine = StartCoroutine(MultiPageTypewriterRoutine());
     }
 
+    /// <summary>Coroutine: types each intro subtitle page one character at a time.</summary>
     private IEnumerator MultiPageTypewriterRoutine()
     {
         if (subtitleText == null) yield break;
@@ -152,8 +172,14 @@ public class SeedPileController : MonoBehaviour
         typewriterCoroutine = null;
     }
 
+    /// <summary>
+    /// Called by ContainerTapHandler with value = 1000, 100, 10 or 1. Returns true if the tap was
+    /// accepted (the container "pops") or false if it was rejected (the container "shakes").
+    /// </summary>
     public bool TryFillContainer(int value, string containerType)
     {
+        // The allowed count is that place-value digit of the target number, e.g. (2305 / 100) % 10 = 3
+        // hundreds.
         int maxAllowed = 0;
         switch (value)
         {
@@ -208,11 +234,17 @@ public class SeedPileController : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Plays the "we already have enough" feedback for the container that was tapped too many
+    /// times.
+    /// </summary>
     private void PlayLimitReachedFeedback(int value, int maxAllowed)
     {
         AudioClip clipToPlay = null;
         string limitSubtitle = "";
 
+        // There is no case for 10: tens are 0 in 2,305, so that tap is caught earlier as a zero
+        // placeholder.
         switch (value)
         {
             case 1000:
@@ -233,6 +265,7 @@ public class SeedPileController : MonoBehaviour
         PlayAudioFeedback(clipToPlay);
     }
 
+    /// <summary>Stops the intro subtitles (once the child starts tapping).</summary>
     private void StopSpawnTypewriter()
     {
         if (typewriterCoroutine != null)
@@ -242,6 +275,7 @@ public class SeedPileController : MonoBehaviour
         }
     }
 
+    /// <summary>Plays the voiceover and subtitle for an accepted tap.</summary>
     private void PlayTapAudioAndSubtitle(int value)
     {
         AudioClip clipToPlay = null;
@@ -271,6 +305,9 @@ public class SeedPileController : MonoBehaviour
         PlayAudioFeedback(clipToPlay);
     }
 
+    /// <summary>
+    /// Plays the special voiceover for the last seed (falls back to the ones clip if not assigned).
+    /// </summary>
     private void PlayFinalSuccessAudioAndSubtitle()
     {
         string finalSubtitle = "All 2,305 seeds are sorted! Excellent job!";
@@ -280,12 +317,16 @@ public class SeedPileController : MonoBehaviour
         PlayAudioFeedback(finalClip);
     }
 
+    /// <summary>Shows a one-line subtitle message.</summary>
     private void ShowTapSubtitle(string message)
     {
         if (subtitlePanel != null) subtitlePanel.SetActive(true);
         if (subtitleText != null) subtitleText.text = message;
     }
 
+    /// <summary>
+    /// Plays one feedback clip, stopping any previous clip so voiceovers never overlap.
+    /// </summary>
     private void PlayAudioFeedback(AudioClip clip)
     {
         if (audioSource != null && clip != null)
@@ -295,6 +336,9 @@ public class SeedPileController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Returns how many of the given container have been tapped (C# switch expression).
+    /// </summary>
     private int GetCountForValue(int val) => val switch
     {
         1000 => countThousands,
@@ -304,6 +348,7 @@ public class SeedPileController : MonoBehaviour
         _    => 0
     };
 
+    /// <summary>Adds one to the counter for the given container.</summary>
     private void IncrementCount(int val)
     {
         if (val == 1000) countThousands++;
@@ -314,10 +359,14 @@ public class SeedPileController : MonoBehaviour
 
     private void UpdateUI()
     {
+        // Update the counter text; the N0 format adds thousands separators (e.g. 2,305).
         if (remainingSeedsText != null)
             remainingSeedsText.text = $"Seeds Remaining: {remainingSeeds:N0}";
     }
 
+    /// <summary>
+    /// All seeds sorted: stop the AR timer, show the expanded-form equation and the completion UI.
+    /// </summary>
     private void OnActivityComplete()
     {
         Debug.Log("Place Value Activity Completed!");

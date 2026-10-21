@@ -1,5 +1,10 @@
 using UnityEngine;
 
+/// <summary>
+/// Applies the language chosen on the login screen to the AR scene's UI. Every bilingual text
+/// exists twice (an English GameObject and a Sinhala GameObject); this script simply enables
+/// one and disables the other, so each language can have its own font and layout.
+/// </summary>
 public class ARSceneLanguageManager : MonoBehaviour
 {
     [Header("Subtitle Boxes to Hide (Sinhala Only)")]
@@ -16,9 +21,12 @@ public class ARSceneLanguageManager : MonoBehaviour
     public GameObject goHomeEng;
     public GameObject goHomeSin;
 
+    /// <summary>Runs once when the AR scene loads.</summary>
     void Start()
     {
         // Retrieve language choice from previous scene
+        // LanguageSwitcher.SelectedLanguageID is static, so it survives scene changes (0 = English, 1
+        // = Sinhala).
         bool isSinhala = (LanguageSwitcher.SelectedLanguageID == 1);
         bool isEnglish = !isSinhala;
 

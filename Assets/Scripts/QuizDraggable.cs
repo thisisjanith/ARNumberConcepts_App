@@ -2,6 +2,11 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+/// <summary>
+/// Gate chapter quiz: a draggable fraction card (e.g. "1/2"). It uses Unity's EventSystem drag
+/// interfaces, so OnBeginDrag, OnDrag and OnEndDrag are called automatically, and a CanvasGroup
+/// to control raycasts and transparency during the drag.
+/// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public class QuizDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -22,6 +27,7 @@ public class QuizDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         canvas = GetComponentInParent<Canvas>();
     }
 
+    /// <summary>Called by the EventSystem when the child starts dragging the card.</summary>
     public void OnBeginDrag(PointerEventData eventData)
     {
         // Prevent dragging if already placed in correct slot
@@ -36,6 +42,7 @@ public class QuizDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         HapticFeedback.MediumTap();
     }
 
+    /// <summary>Called every frame while the card is being dragged.</summary>
     public void OnDrag(PointerEventData eventData)
     {
         // Prevent movement if already placed
@@ -44,6 +51,7 @@ public class QuizDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
     }
 
+    /// <summary>Called when the child releases the card: check the slot underneath.</summary>
     public void OnEndDrag(PointerEventData eventData)
     {
         // Prevent re-processing if already placed

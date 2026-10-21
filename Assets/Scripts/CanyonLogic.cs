@@ -3,11 +3,19 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// Canyon chapter AR activity (odd and even numbers). Eight numbered stones float over a
+/// canyon; the child must tap only the odd ones, in order from bottom to top (77, 67, 43, 23).
+/// Each correct tap makes Dinal hop onto that stone; a wrong tap plays a hint voiceover. When
+/// finished, Dinal hops to the far side, the success narration plays and the Start Quiz button
+/// appears.
+/// </summary>
 public class CanyonLogic : MonoBehaviour
 {
     [Header("Puzzle Sequence")]
     // Bottom-to-top order of the "safe" (odd) tiles the child must tap
     public int[] targetSequence = new int[] { 77, 67, 43, 23 };
+    // Index into targetSequence of the next stone the child must tap.
     private int nextIndex = 0;
 
     [Header("References")]
@@ -54,15 +62,20 @@ public class CanyonLogic : MonoBehaviour
         "The canyon falls quiet once more."
     };
 
+    // Running typewriter coroutine (null when none is running).
     private Coroutine typewriterCoroutine;
     private bool hasInitialized = false; // Prevents counting initial Start() reset as a retry
 
+    /// <summary>Sets up a fresh puzzle when the scene loads.</summary>
     private void Start()
     {
         ResetActivity();
         hasInitialized = true;
     }
 
+    /// <summary>
+    /// Resets the puzzle: tiles, progress and UI. Also wired to the Retry button.
+    /// </summary>
     public void ResetActivity()
     {
         // Analytics: record retry (skip the initial call from Start)
@@ -76,6 +89,7 @@ public class CanyonLogic : MonoBehaviour
         if (startQuizButton != null) startQuizButton.SetActive(false);
         if (subtitlePanel != null) subtitlePanel.SetActive(false);
 
+        // Passing 'true' also finds inactive tiles, so every tile gets reset.
         CanyonTile[] tiles = GetComponentsInChildren<CanyonTile>(true);
         foreach (CanyonTile tile in tiles)
         {
@@ -110,6 +124,9 @@ public class CanyonLogic : MonoBehaviour
         typewriterCoroutine = StartCoroutine(MultiPageTypewriterRoutine(subtitlePages));
     }
 
+    /// <summary>
+    /// Coroutine: types each subtitle page one character at a time, pausing between pages.
+    /// </summary>
     private IEnumerator MultiPageTypewriterRoutine(string[] pages)
     {
         if (subtitleText == null) yield break;
@@ -134,6 +151,7 @@ public class CanyonLogic : MonoBehaviour
         typewriterCoroutine = null;
     }
 
+    /// <summary>Stops the intro subtitles (once the child starts tapping).</summary>
     private void StopSpawnTypewriter()
     {
         if (typewriterCoroutine != null)
@@ -143,13 +161,19 @@ public class CanyonLogic : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called by CanyonTile when tapped. Returns true if this was the next correct stone. Keeping
+    /// the rules here, not in each tile, means the sequence is defined in one place.
+    /// </summary>
     public bool TrySelectTile(int tileNumber, CanyonTile tile)
     {
+        // Puzzle already finished: ignore extra taps.
         if (nextIndex >= targetSequence.Length) return false;
 
         // Stop intro typewriter on first tap
         StopSpawnTypewriter();
 
+        // Correct stone: advance progress, play feedback and move Dinal.
         if (tileNumber == targetSequence[nextIndex])
         {
             nextIndex++;
@@ -163,6 +187,7 @@ public class CanyonLogic : MonoBehaviour
                 if (puzzleSolved && finalDestination != null)
                 {
                     // Hop onto the last tile first, then hop across to the final destination
+                    // The lambda () => { ... } is a callback that runs when the first hop lands.
                     dinalHopper.HopTo(tile.transform, () =>
                     {
                         dinalHopper.HopTo(finalDestination, PlaySuccessVoiceover, applyLandingOffset: false);
@@ -182,10 +207,12 @@ public class CanyonLogic : MonoBehaviour
             return true;
         }
 
+        // Wrong stone: play the "try again" voiceover (the tile flashes red itself).
         PlayAudioFeedback(voWrongTap);
         return false;
     }
 
+    /// <summary>Updates the "Safe Stones: x / 4" progress text.</summary>
     private void UpdateUI()
     {
         if (progressText != null)
@@ -194,6 +221,7 @@ public class CanyonLogic : MonoBehaviour
         }
     }
 
+    /// <summary>Puzzle solved: stop the AR timer and show the completion UI.</summary>
     private void OnActivityComplete(bool playImmediateSuccessVoiceover)
     {
         Debug.Log("Echoing Canyon Activity Completed!");
@@ -213,6 +241,9 @@ public class CanyonLogic : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Plays the success audio, vibration and subtitles, and reveals the Start Quiz button.
+    /// </summary>
     private void PlaySuccessVoiceover()
     {
         PlayAudioFeedback(voSuccess);
@@ -235,10 +266,14 @@ public class CanyonLogic : MonoBehaviour
     /// </summary>
     public void GoToQuiz()
     {
+        // Tell QuizScene to open the Canyon quiz panel (read by MasterQuizController).
         PlayerPrefs.SetString("TargetQuiz", "Canyon");
         SceneManager.LoadScene("QuizScene");
     }
 
+    /// <summary>
+    /// Plays one feedback clip, stopping any previous clip so voiceovers never overlap.
+    /// </summary>
     private void PlayAudioFeedback(AudioClip clip)
     {
         if (audioSource != null && clip != null)

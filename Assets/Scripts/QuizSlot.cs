@@ -2,6 +2,11 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
+/// <summary>
+/// Gate chapter quiz: a drop target for the fraction drag-and-drop quiz. Each slot expects one
+/// fraction value; QuizDraggable compares its fractionType with this slot's expectedValue when
+/// dropped.
+/// </summary>
 public class QuizSlot : MonoBehaviour
 {
     [Header("Slot Settings")]
@@ -18,6 +23,7 @@ public class QuizSlot : MonoBehaviour
     // Red flash for incorrect placement attempts
     public Color wrongColor = Color.red;
 
+    // Cached Image component used for colour feedback.
     private Image slotImage;
 
     void Awake()
@@ -41,6 +47,7 @@ public class QuizSlot : MonoBehaviour
         }
     }
 
+    /// <summary>Called while a draggable hovers over or leaves this slot.</summary>
     public void SetHighlight(bool isHighlighted)
     {
         // Toggle visual feedback when draggable enters/exits this slot
@@ -48,6 +55,7 @@ public class QuizSlot : MonoBehaviour
         slotImage.color = isHighlighted ? highlightColor : normalColor;
     }
 
+    /// <summary>Called by QuizDraggable after a correct drop.</summary>
     public void MarkAsCorrect()
     {
         // Visual confirmation: change to green
@@ -58,10 +66,13 @@ public class QuizSlot : MonoBehaviour
         slotImage.raycastTarget = false;
 
         // Notify quiz manager to increment the score (research data tracking)
+        // QuizDraggable also calls OnAnswerCorrect; QuizManager ignores the duplicate thanks to its
+        // 0.2 second guard.
         QuizManager qm = FindObjectOfType<QuizManager>();
         if(qm != null) qm.OnAnswerCorrect();
     }
 
+    /// <summary>Called by QuizDraggable after a wrong drop.</summary>
     public void MarkAsWrong()
     {
         // Trigger brief red flash feedback for incorrect placement

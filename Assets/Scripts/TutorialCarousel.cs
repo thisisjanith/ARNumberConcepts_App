@@ -2,6 +2,11 @@ using UnityEngine;
 using TMPro; 
 using UnityEngine.UI;
 
+/// <summary>
+/// Step-by-step tutorial (carousel) shown to first-time users in LoginScene. It shows one
+/// instruction page at a time; on the last page the Next button is replaced by a Start button
+/// that launches the AR scene.
+/// </summary>
 public class TutorialCarousel : MonoBehaviour
 {
     [Header("Hierarchy Links")]
@@ -15,6 +20,10 @@ public class TutorialCarousel : MonoBehaviour
     // Tracks current page index (0-based)
     private int currentIndex = 0;
 
+    /// <summary>
+    /// OnEnable runs every time the panel is shown (not just once), so the tutorial always restarts
+    /// at page 1.
+    /// </summary>
     void OnEnable()
     {
         // Reset to first page when tutorial panel becomes active
@@ -22,6 +31,7 @@ public class TutorialCarousel : MonoBehaviour
         ShowPage(currentIndex);
     }
 
+    /// <summary>Wired to the Next button.</summary>
     public void OnNextPressed()
     {
         // Advance to next page
@@ -39,6 +49,7 @@ public class TutorialCarousel : MonoBehaviour
         }
     }
 
+    /// <summary>Shows only the page at 'index' and swaps Next/Start on the last page.</summary>
     void ShowPage(int index)
     {
         // Safety check: prevent out-of-bounds access
@@ -64,6 +75,9 @@ public class TutorialCarousel : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Wired to the final Start button: remembers the tutorial was seen and opens the AR scene.
+    /// </summary>
     public void FinishTutorial()
     {
         // Mark tutorial as seen so it won't repeat on next login

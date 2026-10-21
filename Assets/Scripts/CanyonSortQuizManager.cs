@@ -2,9 +2,15 @@ using System.Collections;
 using UnityEngine;
 using TMPro;
 
+/// <summary>
+/// Canyon chapter quiz (even / odd sorting). Flow: explanation panel ("Got it!") -> drag-and-
+/// drop quiz -> Next Chapter button once every number is sorted -> success panel with voiceover
+/// and typewriter subtitles.
+/// </summary>
 public class CanyonSortQuizManager : MonoBehaviour
 {
     [Header("Settings")]
+    // Number of cards that must be sorted; placedCorrectly counts progress.
     public int totalNumbers = 4;
     private int placedCorrectly = 0;
 
@@ -37,8 +43,13 @@ public class CanyonSortQuizManager : MonoBehaviour
         "Stepping inside, Dinal's breath was taken away by a cave where giant purple, blue, and ice-white crystals sparkled on every surface!"
     };
 
+    // Running typewriter coroutine, so it can be stopped if the quiz is reset.
     private Coroutine typewriterCoroutine;
 
+    /// <summary>
+    /// Hooks up the button listeners in code (instead of in the Inspector), then shows the starting
+    /// state.
+    /// </summary>
     private void Start()
     {
         if (startButton != null)
@@ -54,6 +65,7 @@ public class CanyonSortQuizManager : MonoBehaviour
         ResetQuiz();
     }
 
+    /// <summary>Returns every panel to the starting state (explanation visible).</summary>
     public void ResetQuiz()
     {
         placedCorrectly = 0;
@@ -72,6 +84,9 @@ public class CanyonSortQuizManager : MonoBehaviour
         if (storyText != null) storyText.text = "";
     }
 
+    /// <summary>
+    /// Called by "Got it!": hides the explanation, shows the quiz and starts the analytics timer.
+    /// </summary>
     public void StartQuiz()
     {
         if (explanationPanel != null) explanationPanel.SetActive(false);
@@ -85,6 +100,7 @@ public class CanyonSortQuizManager : MonoBehaviour
         }
     }
 
+    /// <summary>Called by CanyonNumberDraggable after each correct drop.</summary>
     public void OnNumberPlacedCorrectly()
     {
         placedCorrectly++;
@@ -119,6 +135,7 @@ public class CanyonSortQuizManager : MonoBehaviour
         PlaySuccessSequence();
     }
 
+    /// <summary>Plays the success voiceover and starts the subtitle typewriter.</summary>
     private void PlaySuccessSequence()
     {
         if (audioSource != null && voSuccess != null)
@@ -137,6 +154,9 @@ public class CanyonSortQuizManager : MonoBehaviour
         typewriterCoroutine = StartCoroutine(MultiPageTypewriterRoutine(successPages));
     }
 
+    /// <summary>
+    /// Coroutine: types each page one character at a time, pausing between pages.
+    /// </summary>
     private IEnumerator MultiPageTypewriterRoutine(string[] pages)
     {
         if (storyText == null) yield break;
@@ -148,6 +168,7 @@ public class CanyonSortQuizManager : MonoBehaviour
 
             for (int i = 0; i <= pageText.Length; i++)
             {
+                // Substring(0, i) shows the first i characters, growing by one each step.
                 storyText.text = pageText.Substring(0, i);
                 yield return new WaitForSeconds(timePerCharacter);
             }

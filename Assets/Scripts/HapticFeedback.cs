@@ -16,11 +16,18 @@ using UnityEngine;
 public static class HapticFeedback
 {
 #if UNITY_ANDROID && !UNITY_EDITOR
+    // Cached Android Vibrator system service (a Java object reached through JNI).
     private static AndroidJavaObject _vibrator;
+    // Init runs only once per app session.
     private static bool _initialized;
     private static bool _hasNativeVibrator;
+    // Android API level (e.g. 26 = Android 8.0); -1 until it has been read.
     private static int _sdkInt = -1;
 
+    /// <summary>
+    /// Reads the Android version and gets the Vibrator system service through Unity's
+    /// AndroidJavaClass / AndroidJavaObject bridge. Done lazily on the first vibration.
+    /// </summary>
     private static void Init()
     {
         if (_initialized) return;
@@ -28,11 +35,13 @@ public static class HapticFeedback
 
         try
         {
+            // Read Build.VERSION.SDK_INT to know which vibration API is available.
             using (var version = new AndroidJavaClass("android.os.Build$VERSION"))
             {
                 _sdkInt = version.GetStatic<int>("SDK_INT");
             }
 
+            // Get the current Android Activity, then ask it for the "vibrator" system service.
             using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
             {
                 var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
@@ -74,6 +83,10 @@ public static class HapticFeedback
         TriggerVibration(30);
     }
 
+    /// <summary>
+    /// Shared implementation. The #if blocks choose platform code at compile time, so Android, iOS
+    /// and the Unity Editor each get their own version; in the Editor it only logs a message.
+    /// </summary>
     private static void TriggerVibration(long milliseconds)
     {
         try

@@ -1,5 +1,13 @@
 using UnityEngine;
 
+/// <summary>
+/// First screen of LoginScene, where the child chooses English or Sinhala. The choice is kept
+/// in a static field so every later scene can read it: static fields belong to the class rather
+/// than to a GameObject, so they are not destroyed when scenes change (they reset to English
+/// when the app restarts). It also switches every login, menu and tutorial text to the chosen
+/// language and tells AnalyticsManager, so each session's research data records the language
+/// used.
+/// </summary>
 public class LanguageSwitcher : MonoBehaviour
 {
     // Static language state persists across scenes: 0 = English, 1 = Sinhala
@@ -37,6 +45,7 @@ public class LanguageSwitcher : MonoBehaviour
     public GameObject step3Eng;
     public GameObject step3Sin;
 
+    /// <summary>Wired to the language buttons' OnClick: 0 = English, 1 = Sinhala.</summary>
     public void SelectLanguage(int langIndex)
     {
         SelectedLanguageID = langIndex;

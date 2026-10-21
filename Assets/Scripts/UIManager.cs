@@ -4,6 +4,13 @@ using TMPro;
 using UnityEngine.SceneManagement;
 using System.Collections; // Required for the Typewriter effect
 
+/// <summary>
+/// Central UI navigation script reused in several scenes (LoginScene, the AR scene SampleScene
+/// and QuizScene). It switches panels on and off and loads scenes. Because the same script is
+/// used in different scenes, Start() checks the current scene name and sets up the right
+/// panels. Scene flow: OnboardingScene -> LoginScene -> SampleScene (AR) -> QuizScene -> back
+/// to LoginScene.
+/// </summary>
 public class UIManager : MonoBehaviour
 {
     [Header("Login Scene Panels")]
@@ -53,6 +60,9 @@ public class UIManager : MonoBehaviour
     // Language state: true = Sinhala, false = English
     private bool isSinhala;
 
+    /// <summary>
+    /// Runs when the scene loads: reads the language and sets up the panels for this scene.
+    /// </summary>
     void Start()
     {
         // Detect language selection from previous scene
@@ -96,6 +106,10 @@ public class UIManager : MonoBehaviour
 
     // --- LOGIN & MAIN MENU METHODS ---
 
+    /// <summary>
+    /// Reloads LoginScene and opens the tutorial there. A PlayerPrefs flag is used because it must
+    /// survive the scene load.
+    /// </summary>
     public void GoToTutorial()
     {
         // Set a flag to indicate we want to open the tutorial panel when LoginScene loads
@@ -103,6 +117,7 @@ public class UIManager : MonoBehaviour
         SceneManager.LoadScene("LoginScene");
     }
 
+    /// <summary>Login -> main menu.</summary>
     public void ShowMainMenu()
     {
         // Transition from login to main menu
@@ -111,6 +126,7 @@ public class UIManager : MonoBehaviour
         if (tutorialPanel) tutorialPanel.SetActive(false);
     }
 
+    /// <summary>Main menu -> tutorial.</summary>
     public void ShowTutorial()
     {
         // Show tutorial carousel for first-time users
@@ -118,6 +134,7 @@ public class UIManager : MonoBehaviour
         if (tutorialPanel) tutorialPanel.SetActive(true);
     }
 
+    /// <summary>Back to the login panel.</summary>
     public void ShowLoginPanel()
     {
         // Return to login/language selection
@@ -125,12 +142,14 @@ public class UIManager : MonoBehaviour
         if (mainMenuPanel) mainMenuPanel.SetActive(false);
     }
 
+    /// <summary>Opens the AR scene (called when the tutorial finishes).</summary>
     public void LoadARScene()
     {
         // Load the AR mission scene
         SceneManager.LoadScene("SampleScene");
     }
 
+    /// <summary>Opens QuizScene showing the Gate chapter quiz.</summary>
     public void LoadQuizScene()
     {
         // Specifically tell the next scene to open the Gate quiz
@@ -141,6 +160,7 @@ public class UIManager : MonoBehaviour
 
     // --- AR & QUIZ METHODS ---
 
+    /// <summary>Shows the victory panel and starts the narration.</summary>
     public void ShowSuccessPanel()
     {
         // Show victory screen after mission completion
@@ -152,6 +172,7 @@ public class UIManager : MonoBehaviour
         StartCoroutine(PlayVictorySequence());
     }
 
+    /// <summary>Coroutine: plays the victory voiceover and the matching story text.</summary>
     IEnumerator PlayVictorySequence()
     {
         // Clear text before starting sequence
@@ -193,6 +214,7 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    /// <summary>Leaves AR and shows the quiz panel in the same scene.</summary>
     public void OpenQuiz()
     {
         // Stop any playing voiceover before transitioning to quiz
@@ -207,17 +229,25 @@ public class UIManager : MonoBehaviour
         if (quizPanel) quizPanel.SetActive(true);
     }
 
+    /// <summary>
+    /// Kept so existing button and script references still work; the results panel was removed from
+    /// the design.
+    /// </summary>
     public void ShowQuizResults(int correct, int total)
     {
         // Result panel intentionally left empty per design requirements
     }
 
+    /// <summary>Reloads the AR scene for another attempt.</summary>
     public void ScanAgain()
     {
         // Reload AR scene for retry
         SceneManager.LoadScene("SampleScene");
     }
 
+    /// <summary>
+    /// Wired to the Home button: submits the analytics session, then returns to LoginScene.
+    /// </summary>
     public void GoHome()
     {
         // Analytics: fire the submit and move on immediately - AnalyticsManager is

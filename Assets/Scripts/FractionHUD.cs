@@ -4,10 +4,18 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
+/// <summary>
+/// Gate chapter on-screen HUD that shows fraction progress: the numerator (pieces placed) over
+/// the denominator 4, plus a circular ring that fills as pieces are added. It briefly shows the
+/// "Numerator" / "Denominator" labels and plays narration with subtitles at each step, linking
+/// the AR action to fraction vocabulary.
+/// </summary>
 public class FractionHUD : MonoBehaviour
 {
     [Header("UI Elements")]
+    // Text showing the current numerator (0 to 4).
     public TextMeshProUGUI numeratorText;
+    // Circular image that fills clockwise (Radial360) to show the fraction visually.
     public Image radialFill;
     public RectTransform container; // This is your FractionHolder
 
@@ -21,6 +29,7 @@ public class FractionHUD : MonoBehaviour
     public TextMeshProUGUI subtitleText;
 
     [Header("Audio Settings")]
+    // Narration index 0 is the intro; index n is played after the n-th piece is placed.
     public AudioSource audioSource;
     [Tooltip("Put English audio clips here")]
     public AudioClip[] narrationClipsEng;
@@ -33,8 +42,11 @@ public class FractionHUD : MonoBehaviour
 
     [Header("Settings")]
     public int totalPieces = 4;
+    // Pieces placed so far.
     private int currentPieces = 0;
+    // Subtitles longer than this are split into several pages.
     public int maxCharsPerPage = 100;
+    // Makes sure the intro narration plays only once, even if the marker is lost and found again.
     private bool introPlayed = false; 
     
     [Header("Animation")]
@@ -45,6 +57,10 @@ public class FractionHUD : MonoBehaviour
     private Coroutine subtitleCoroutine;
     private bool isSinhala;
 
+    /// <summary>
+    /// Finds any missing references, sets up the radial fill and bilingual labels, and hides the
+    /// HUD until the AR marker is detected.
+    /// </summary>
     void Start()
     {
         // Detect language selection from LoginScene
@@ -108,6 +124,7 @@ public class FractionHUD : MonoBehaviour
 
     // --- AR TRACKING INTERFACE (Link to Image Target Events) ---
 
+    /// <summary>Hooked to the Vuforia Image Target's "On Target Found" event.</summary>
     public void OnTargetFound()
     {
         // Show HUD when AR marker enters view
@@ -119,6 +136,7 @@ public class FractionHUD : MonoBehaviour
             AnalyticsManager.Instance.StartARTimer();
     }
 
+    /// <summary>Hooked to the Vuforia Image Target's "On Target Lost" event.</summary>
     public void OnTargetLost()
     {
         // Hide HUD when marker leaves view
@@ -128,6 +146,7 @@ public class FractionHUD : MonoBehaviour
 
     // --- RESET LOGIC (Called by MissionLogic for Retry) ---
 
+    /// <summary>Clears the HUD for a retry.</summary>
     public void ResetHUD()
     {
         // Clear piece count and replay state for retry flow
@@ -139,6 +158,7 @@ public class FractionHUD : MonoBehaviour
 
     // --- CORE HUD LOGIC ---
 
+    /// <summary>Shows the HUD and plays the intro narration the first time.</summary>
     public void TriggerIntro()
     {
         // Show HUD when AR marker enters view
@@ -152,6 +172,7 @@ public class FractionHUD : MonoBehaviour
         }
     }
 
+    /// <summary>Called by StonePiece when a piece is placed.</summary>
     public void AddPiece()
     {
         // Increment counter and trigger animation + narration
@@ -160,10 +181,14 @@ public class FractionHUD : MonoBehaviour
         PlayNarration(currentPieces);
     }
 
+    /// <summary>
+    /// Updates the numerator text and the ring; animate = true plays the pulse animation.
+    /// </summary>
     void UpdateUI(bool animate)
     {
         // Update numerator text and radial fill
         if (numeratorText != null) numeratorText.text = currentPieces.ToString();
+        // Cast to float, otherwise integer division would give 0 (e.g. 1 / 4 = 0 with ints).
         float targetFill = (float)currentPieces / (float)totalPieces;
         Debug.Log($"[FractionHUD] UpdateUI -> pieces: {currentPieces}/{totalPieces}, targetFill: {targetFill}, animate: {animate}, radialFill assigned: {radialFill != null}");
 
@@ -177,6 +202,9 @@ public class FractionHUD : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Plays the narration clip for 'index' in the chosen language, with English subtitles.
+    /// </summary>
     void PlayNarration(int index)
     {
         // Play audio clip and display subtitles (English only)
@@ -185,6 +213,7 @@ public class FractionHUD : MonoBehaviour
 
         AudioClip[] activeClips = isSinhala ? narrationClipsSin : narrationClipsEng;
 
+        // Guard against a missing clip or an index beyond the array.
         if (index < activeClips.Length && activeClips[index] != null)
         {
             audioSource.clip = activeClips[index];
@@ -204,6 +233,9 @@ public class FractionHUD : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Coroutine: types the subtitle so it finishes in time with the audio clip.
+    /// </summary>
     IEnumerator TypewriterSubtitle(string fullText, float audioLength)
     {
         // Display text character-by-character synced to audio duration
@@ -211,11 +243,13 @@ public class FractionHUD : MonoBehaviour
         subtitlePanel.SetActive(true);
 
         string[] pages = SplitTextIntoPages(fullText, maxCharsPerPage);
+        // Share the audio time equally between the pages.
         float timePerPage = audioLength / pages.Length;
 
         foreach (string pageText in pages)
         {
             subtitleText.text = "";
+            // Type during 85% of each page's time, leaving a short pause before the next page.
             float timePerChar = (timePerPage * 0.85f) / pageText.Length;
 
             foreach (char letter in pageText.ToCharArray())
@@ -230,6 +264,9 @@ public class FractionHUD : MonoBehaviour
         subtitlePanel.SetActive(false);
     }
 
+    /// <summary>
+    /// Coroutine: pulses the HUD and animates the ring to the new fill amount.
+    /// </summary>
     IEnumerator PulseEffect(float targetFill)
     {
         // Animate container scale and radial fill on piece placement
@@ -255,6 +292,7 @@ public class FractionHUD : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float percent = elapsed / animationDuration;
+            // The sine curve goes 0 -> 1 -> 0, so the HUD grows and then shrinks back in one smooth pulse.
             float curve = Mathf.Sin(percent * Mathf.PI);
             container.localScale = Vector3.Lerp(originalScale, targetScale, curve);
             radialFill.fillAmount = Mathf.Lerp(startFill, targetFill, percent);
@@ -278,6 +316,9 @@ public class FractionHUD : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Splits text into pages of at most maxChars characters, breaking only between words.
+    /// </summary>
     string[] SplitTextIntoPages(string text, int maxChars)
     {
         // Break long text into pages for readable subtitle display

@@ -1,6 +1,11 @@
 using UnityEngine;
 using TMPro;
 
+/// <summary>
+/// Gate chapter quiz manager (fraction drag-and-drop). Counts correct placements, and when all
+/// totalQuestions are correct it reveals the Next Chapter button. It also reports the number of
+/// questions and the quiz time to AnalyticsManager for the research data.
+/// </summary>
 public class QuizManager : MonoBehaviour
 {
     [Header("Settings")]
@@ -21,6 +26,9 @@ public class QuizManager : MonoBehaviour
     // Button that appears when all questions are answered correctly
     public GameObject nextChapterButton;
 
+    /// <summary>
+    /// Resets the quiz and starts the analytics quiz timer when the scene loads.
+    /// </summary>
     void Start()
     {
         // Reset quiz state for fresh session
@@ -42,6 +50,9 @@ public class QuizManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called by QuizDraggable / QuizSlot when a fraction is dropped into the correct slot.
+    /// </summary>
     public void OnAnswerCorrect()
     {
         // Ignore if quiz already completed
@@ -64,6 +75,9 @@ public class QuizManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// All answers correct: stop the quiz timer and show the Next Chapter button.
+    /// </summary>
     void FinishQuiz()
     {
         // Mark quiz as complete to prevent further scoring
@@ -81,6 +95,7 @@ public class QuizManager : MonoBehaviour
         }
     }
 
+    /// <summary>Public so a Retry button can reset the quiz.</summary>
     public void ResetQuiz()
     {
         // Reset all quiz state for retry or new session

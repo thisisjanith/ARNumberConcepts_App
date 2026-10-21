@@ -4,6 +4,12 @@ using TMPro;
 using UnityEngine.SceneManagement;
 using System.Collections; // Required for the Typewriter Coroutine
 
+/// <summary>
+/// Gate chapter AR mission controller. Counts the Sun-Stone pieces placed; once all 4 are in,
+/// it shows the "Start Quiz" and Retry buttons. It then plays the victory narration and sends
+/// the child to the quiz. It also reports AR time, retries and the end of the session to
+/// AnalyticsManager.
+/// </summary>
 public class MissionLogic : MonoBehaviour 
 {
     [Header("UI References")]
@@ -19,6 +25,7 @@ public class MissionLogic : MonoBehaviour
     public AudioClip victoryVoiceClipSin; 
 
     [Header("Mission Settings")]
+    // Pieces placed so far (private, so it does not appear in the Inspector).
     private int piecesCollected = 0;
     public int totalPieces = 4; 
     public float typingSpeed = 0.04f; 
@@ -26,8 +33,10 @@ public class MissionLogic : MonoBehaviour
     [TextArea(3, 10)]
     public string storyContent = "Amazing work! As the final stone clicked into place, a surge of golden light filled the air. By mastering the numbers, you have successfully repaired the ancient mechanism and unlocked the legendary Wild Gate. Look! Nimal is stepping through the portal into the deep, mysterious jungle beyond.";
 
+    // Cached language flag: true = Sinhala.
     private bool isSinhala;
 
+    /// <summary>Buttons and success panel stay hidden until the mission is complete.</summary>
     void Start()
     {
         // Retrieve language choice from LoginScene
@@ -38,6 +47,7 @@ public class MissionLogic : MonoBehaviour
         if(successPanel) successPanel.SetActive(false);
     }
 
+    /// <summary>Called by StonePiece each time a piece locks into place.</summary>
     public void PiecePlaced()
     {
         // Track piece placement and show finish button when all collected
@@ -48,6 +58,9 @@ public class MissionLogic : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows the Start Quiz and Retry buttons with text in the chosen language.
+    /// </summary>
     void ShowFinishButton()
     {
         // Display button with bilingual text
@@ -59,11 +72,16 @@ public class MissionLogic : MonoBehaviour
             TMP_Text btnText = finishButton.GetComponentInChildren<TMP_Text>();
             if(btnText != null)
             {
+                // The ternary operator (condition ? a : b) picks the text for the chosen language.
                 btnText.text = isSinhala ? "ප්‍රශ්නාවලිය අරඹන්න" : "Start Quiz";
             }
         }
     }
 
+    /// <summary>
+    /// Wired to the Start Quiz button. First press plays the victory sequence; the second press
+    /// (success panel already open) goes to the quiz.
+    /// </summary>
     public void OnFinishButtonClicked()
     {
         // Analytics: stop AR interaction timer
@@ -91,6 +109,10 @@ public class MissionLogic : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Coroutine: plays the victory voiceover; in English the story is typed out at a speed matched
+    /// to the audio length.
+    /// </summary>
     IEnumerator PlayVictorySequence()
     {
         // Play bilingual victory narration with typewriter effect (English only)
@@ -124,6 +146,8 @@ public class MissionLogic : MonoBehaviour
             else
             {
                 // Sinhala text displays instantly for readability
+                // The text is cleared because in Sinhala mode the subtitle box is hidden (see
+                // ARSceneLanguageManager) and the story is told by the voiceover alone.
                 storyTextDisplay.text = "";
             }
         }
@@ -137,6 +161,7 @@ public class MissionLogic : MonoBehaviour
         }
     }
 
+    /// <summary>Hides the success panel and asks UIManager to open the quiz.</summary>
     public void GoToQuiz()
     {
         // Transition to quiz scene
@@ -144,6 +169,9 @@ public class MissionLogic : MonoBehaviour
         if(uiManager != null) uiManager.OpenQuiz();
     }
 
+    /// <summary>
+    /// Wired to the Retry button: reloads the current scene for a fresh attempt.
+    /// </summary>
     public void ScanAgain()
     {
         // Analytics: record retry
@@ -154,6 +182,9 @@ public class MissionLogic : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    /// <summary>
+    /// Wired to the Home button: submits the analytics session, then returns to LoginScene.
+    /// </summary>
     public void GoToMainMenu()
     {
         // Analytics: fire the submit and move on immediately - AnalyticsManager is

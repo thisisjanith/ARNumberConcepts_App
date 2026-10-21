@@ -2,6 +2,10 @@ using UnityEngine;
 using TMPro;
 using System.Collections;
 
+/// <summary>
+/// Plays the bilingual victory sequence when a chapter is finished: shows the success panel,
+/// plays the English or Sinhala voiceover and displays the story text.
+/// </summary>
 public class VictoryManager : MonoBehaviour
 {
     [Header("UI References")]
@@ -28,6 +32,7 @@ public class VictoryManager : MonoBehaviour
     // Language state: true = Sinhala, false = English
     private bool isSinhala;
 
+    /// <summary>Read the chosen language once when the scene starts.</summary>
     void Start()
     {
         // Detect language selection from previous scene
@@ -42,6 +47,9 @@ public class VictoryManager : MonoBehaviour
         StartCoroutine(PlaySequence());
     }
 
+    /// <summary>
+    /// Coroutine, so the typewriter can wait between characters without freezing the game.
+    /// </summary>
     IEnumerator PlaySequence()
     {
         // Clear text before starting
